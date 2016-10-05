@@ -1,0 +1,10 @@
+{
+  "autoload": {
+    "psr-4": {
+      "CCB\\JsonFormatter\\Behat\\": ["src"]
+    }
+  },
+  "require-dev": {
+    "behat/behat": "^3.1"
+  }
+}
