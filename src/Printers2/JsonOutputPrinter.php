@@ -5,7 +5,7 @@ namespace CCB\JsonFormatter\Behat\Printers2;
 use Behat\Behat\Output\Node\Printer\Helper\ResultToStringConverter;
 use Behat\Behat\Output\Statistics\PhaseStatistics;
 use Behat\Gherkin\Node\FeatureNode;
-use Behat\Gherkin\Node\ScenarioNode;
+use Behat\Gherkin\Node\ScenarioInterface;
 use Behat\Gherkin\Node\StepNode;
 use Behat\Gherkin\Node\TaggedNodeInterface;
 use Behat\Testwork\Output\Printer\Factory\OutputFactory;
@@ -90,7 +90,7 @@ class JsonOutputPrinter extends StreamOutputPrinter
 		$this->after = [];
 	}
 
-	public function afterScenario(ScenarioNode $scenarioNode)
+	public function afterScenario(ScenarioInterface $scenarioNode)
 	{
 		$scenarioId = $this->featureId.';'.$this->getId($scenarioNode->getTitle());
 
