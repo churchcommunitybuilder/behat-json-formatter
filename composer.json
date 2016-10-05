@@ -1,4 +1,5 @@
 {
+  "name": "ccb/behat-json-formatter",
   "autoload": {
     "psr-4": {
       "CCB\\JsonFormatter\\Behat\\": ["src"]
