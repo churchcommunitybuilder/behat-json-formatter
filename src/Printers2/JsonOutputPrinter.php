@@ -16,6 +16,8 @@ use Behat\Testwork\Tester\Setup\Setup;
 
 class JsonOutputPrinter extends StreamOutputPrinter
 {
+	protected static $hasPrintedFeature = false;
+
 	protected $statistics;
 	protected $basePath;
 	protected $converter;
@@ -38,17 +40,19 @@ class JsonOutputPrinter extends StreamOutputPrinter
 
 	public function start()
 	{
+		self::$hasPrintedFeature = false;
 		$this->write('[');
 	}
 
 	public function complete()
 	{
+		self::$hasPrintedFeature = false;
 		$this->write(']');
 	}
 
 	public function addFeature(FeatureNode $feature)
 	{
-		$hasPreviousFeature = $this->featureId !== null;
+		$hasPreviousFeature = self::$hasPrintedFeature;
 
 		$filename = pathinfo($feature->getFile(), PATHINFO_FILENAME);
 		$this->featureId = $this->getId($filename);
@@ -75,6 +79,7 @@ class JsonOutputPrinter extends StreamOutputPrinter
 		}
 
 		$this->write($json);
+		self::$hasPrintedFeature = true;
 	}
 
 	public function endFeature()
