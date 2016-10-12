@@ -17,6 +17,7 @@ use Behat\Testwork\Tester\Setup\Setup;
 class JsonOutputPrinter extends StreamOutputPrinter
 {
 	protected static $hasPrintedFeature = false;
+	protected static $hasPrintedScenario = false;
 
 	protected $statistics;
 	protected $basePath;
@@ -80,6 +81,7 @@ class JsonOutputPrinter extends StreamOutputPrinter
 
 		$this->write($json);
 		self::$hasPrintedFeature = true;
+		self::$hasPrintedScenario = false;
 	}
 
 	public function endFeature()
@@ -89,7 +91,9 @@ class JsonOutputPrinter extends StreamOutputPrinter
 
 	public function beforeScenario()
 	{
-
+		if (self::$hasPrintedScenario) {
+			$this->write(',');
+		}
 		$this->before = [];
 		$this->steps = [];
 		$this->after = [];
@@ -97,7 +101,7 @@ class JsonOutputPrinter extends StreamOutputPrinter
 
 	public function afterScenario(ScenarioInterface $scenarioNode)
 	{
-		$scenarioId = $this->featureId.';'.$this->getId($scenarioNode->getTitle());
+		$scenarioId = $this->featureId . ';' . $this->getId($scenarioNode->getTitle());
 
 		$scenarioTags = array_merge($this->featureTags, $this->getTags($scenarioNode));
 
@@ -115,6 +119,8 @@ class JsonOutputPrinter extends StreamOutputPrinter
 		];
 
 		$this->write(json_encode($scenarioData, JSON_PRETTY_PRINT));
+
+		self::$hasPrintedScenario = true;
 	}
 
 	protected function getTags(TaggedNodeInterface $node)
@@ -122,7 +128,7 @@ class JsonOutputPrinter extends StreamOutputPrinter
 		$tags = [];
 		foreach ($node->getTags() as $tag) {
 			$tags[] = [
-				'name' => '@'.$tag,
+				'name' => '@' . $tag,
 				'line' => $node->getLine() - 1, // Behat doesn't keep track of the tag lines
 			];
 		}
