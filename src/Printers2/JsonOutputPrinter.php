@@ -24,6 +24,7 @@ class JsonOutputPrinter extends StreamOutputPrinter
 	protected $converter;
 
 	protected $featureId = null;
+	protected $featureUri = null;
 	protected $featureTags;
 	protected $before;
 	protected $steps;
@@ -57,9 +58,9 @@ class JsonOutputPrinter extends StreamOutputPrinter
 
 		$filename = pathinfo($feature->getFile(), PATHINFO_FILENAME);
 		$this->featureId = $this->getId($filename);
-
+		$this->featureUri = str_replace($this->basePath, '', $feature->getFile());
 		$featureData = [
-			'uri' => str_replace($this->basePath, '', $feature->getFile()),
+			'uri' => $this->featureUri,
 			'id' => $this->featureId,
 			'keyword' => $feature->getKeyword(),
 			'name' => $feature->getTitle(),
@@ -156,7 +157,14 @@ class JsonOutputPrinter extends StreamOutputPrinter
 		if ($result instanceof ExceptionResult) {
 			$ex = $result->getException();
 			if ($ex !== null) {
-				$stepData['result']['error_message'] = (string)$ex;
+				$errorMessage = (string)$ex;
+				if (($pos = strpos(strtolower($errorMessage), '[internal function]')) !== false) {
+					$errorMessage = substr($errorMessage, 0, $pos);
+				}
+
+				$errorMessage .= ' in '.$this->featureUri.':'.$stepNode->getLine();
+
+				$stepData['result']['error_message'] = $errorMessage;
 			}
 		}
 
