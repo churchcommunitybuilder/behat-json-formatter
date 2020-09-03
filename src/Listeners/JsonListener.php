@@ -13,7 +13,7 @@ use Behat\Testwork\EventDispatcher\Event\BeforeExerciseCompleted;
 use Behat\Testwork\Output\Formatter;
 use Behat\Testwork\Output\Node\EventListener\EventListener;
 use CCB\JsonFormatter\Behat\Printers2\JsonOutputPrinter;
-use Symfony\Component\EventDispatcher\Event;
+use Behat\Testwork\Event\Event;
 
 class JsonListener implements EventListener
 {
