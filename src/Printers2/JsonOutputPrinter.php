@@ -156,6 +156,9 @@ class JsonOutputPrinter extends StreamOutputPrinter
 		if ($result instanceof ExceptionResult) {
 			$ex = $result->getException();
 			if ($ex !== null) {
+				$exceptionString = (string)$ex;
+				$featureLine = array_reverse(explode(PHP_EOL, $exceptionString))[0];
+
 				$exceptionTrace = $ex->getTrace();
 
 				$trace = array_map(function ($trace) {
@@ -170,13 +173,14 @@ class JsonOutputPrinter extends StreamOutputPrinter
 						return null;
 					}
 
-					$file = basename($file);
 					return "{$file}:{$line}";
 				}, $exceptionTrace);
 
-				$errorMessage = get_class($ex) . ':' . $ex->getMessage() . ' in ';
+				$errorMessage = get_class($ex) . ': ' . $ex->getMessage() . ' in ' . PHP_EOL;
 
 				$errorMessage .= implode(PHP_EOL, array_filter($trace));
+
+				$errorMessage .= PHP_EOL . $featureLine;
 
 				$stepData['result']['error_message'] = $errorMessage;
 			}
