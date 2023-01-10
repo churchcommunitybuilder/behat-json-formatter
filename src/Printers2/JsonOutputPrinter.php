@@ -12,7 +12,6 @@ use Behat\Testwork\Output\Printer\Factory\OutputFactory;
 use Behat\Testwork\Output\Printer\StreamOutputPrinter;
 use Behat\Testwork\Tester\Result\ExceptionResult;
 use Behat\Testwork\Tester\Result\TestResult;
-use Behat\Testwork\Tester\Setup\Setup;
 
 class JsonOutputPrinter extends StreamOutputPrinter
 {
@@ -157,12 +156,27 @@ class JsonOutputPrinter extends StreamOutputPrinter
 		if ($result instanceof ExceptionResult) {
 			$ex = $result->getException();
 			if ($ex !== null) {
-				$errorMessage = (string)$ex;
-				if (($pos = strpos(strtolower($errorMessage), '[internal function]')) !== false) {
-					$errorMessage = substr($errorMessage, 0, $pos);
-				}
+				$exceptionTrace = $ex->getTrace();
 
-				$errorMessage .= ' in '.$this->featureUri.':'.$stepNode->getLine();
+				$trace = array_map(function ($trace) {
+					$file = $trace['file'] ?? '';
+					$line = $trace['line'] ?? '';
+
+					if ($file === '' && $line === '') {
+						return null;
+					}
+
+					if (str_contains($file, '/vendor/')) {
+						return null;
+					}
+
+					$file = basename($file);
+					return "{$file}:{$line}";
+				}, $exceptionTrace);
+
+				$errorMessage = get_class($ex) . ':' . $ex->getMessage() . ' in ';
+
+				$errorMessage .= implode(PHP_EOL, array_filter($trace));
 
 				$stepData['result']['error_message'] = $errorMessage;
 			}
