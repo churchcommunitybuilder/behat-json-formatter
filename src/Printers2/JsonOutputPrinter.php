@@ -29,9 +29,12 @@ class JsonOutputPrinter extends StreamOutputPrinter
 	protected $steps;
 	protected $after;
 
-	public function __construct(OutputFactory $outputFactory, PhaseStatistics $statistics,
-								ResultToStringConverter $converter, $basePath)
-	{
+	public function __construct(
+		OutputFactory $outputFactory,
+		PhaseStatistics $statistics,
+		ResultToStringConverter $converter,
+		$basePath
+	) {
 		parent::__construct($outputFactory);
 		$this->statistics = $statistics;
 		$this->converter = $converter;
@@ -156,8 +159,7 @@ class JsonOutputPrinter extends StreamOutputPrinter
 		if ($result instanceof ExceptionResult) {
 			$ex = $result->getException();
 			if ($ex !== null) {
-				$exceptionString = (string)$ex;
-				$featureLine = array_reverse(explode(PHP_EOL, $exceptionString))[0];
+				$featureLine = ' in ' . $this->featureUri . ':' . $stepNode->getLine();
 
 				$exceptionTrace = $ex->getTrace();
 
