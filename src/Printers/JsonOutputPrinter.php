@@ -102,7 +102,7 @@ class JsonOutputPrinter extends StreamOutputPrinter
 		$this->steps = [];
 		$this->after = [];
 
-		$this->scenarioLine = $scenarioNode;
+		$this->scenarioLine = $scenarioNode->getLine();
 	}
 
 	public function afterScenario(ScenarioInterface $scenarioNode)
