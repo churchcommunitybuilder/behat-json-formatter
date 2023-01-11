@@ -12,8 +12,8 @@ use Behat\Testwork\EventDispatcher\Event\AfterExerciseCompleted;
 use Behat\Testwork\EventDispatcher\Event\BeforeExerciseCompleted;
 use Behat\Testwork\Output\Formatter;
 use Behat\Testwork\Output\Node\EventListener\EventListener;
-use CCB\JsonFormatter\Behat\Printers2\JsonOutputPrinter;
 use Behat\Testwork\Event\Event;
+use CCB\JsonFormatter\Behat\Printers\JsonOutputPrinter;
 
 class JsonListener implements EventListener
 {
@@ -27,8 +27,6 @@ class JsonListener implements EventListener
 		$this->afterScenarioTested($formatter, $event);
 		$this->beforeStepTested($formatter, $event);
 		$this->afterStepTested($formatter, $event);
-
-//		echo $eventName.' => '.get_class($event)."\n";
 	}
 
 	protected function beforeExerciseCompleted(Formatter $formatter, Event $event)
@@ -73,7 +71,7 @@ class JsonListener implements EventListener
 			return;
 		}
 
-		$this->getOutputPrinter($formatter)->beforeScenario();
+		$this->getOutputPrinter($formatter)->beforeScenario($event->getScenario());
 	}
 
 	protected function afterScenarioTested(Formatter $formatter, Event $event)
@@ -111,7 +109,7 @@ class JsonListener implements EventListener
 	{
 		$printer = $formatter->getOutputPrinter();
 		if (!$printer instanceof JsonOutputPrinter) {
-			throw new \RuntimeException('Output printer must be instance of '.JsonOutputPrinter::class);
+			throw new \RuntimeException('Output printer must be instance of ' . JsonOutputPrinter::class);
 		}
 
 		return $printer;

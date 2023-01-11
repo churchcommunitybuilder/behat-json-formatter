@@ -1,6 +1,6 @@
 <?php
 
-namespace CCB\JsonFormatter\Behat\Printers2;
+namespace CCB\JsonFormatter\Behat\Printers;
 
 use Behat\Behat\Output\Node\Printer\Helper\ResultToStringConverter;
 use Behat\Behat\Output\Statistics\PhaseStatistics;
@@ -24,6 +24,7 @@ class JsonOutputPrinter extends StreamOutputPrinter
 
 	protected $featureId = null;
 	protected $featureUri = null;
+	protected $scenarioLine = null;
 	protected $featureTags;
 	protected $before;
 	protected $steps;
@@ -92,7 +93,7 @@ class JsonOutputPrinter extends StreamOutputPrinter
 		$this->write(']}');
 	}
 
-	public function beforeScenario()
+	public function beforeScenario(ScenarioInterface $scenarioNode)
 	{
 		if (self::$hasPrintedScenario) {
 			$this->write(',');
@@ -100,6 +101,8 @@ class JsonOutputPrinter extends StreamOutputPrinter
 		$this->before = [];
 		$this->steps = [];
 		$this->after = [];
+
+		$this->scenarioLine = $scenarioNode;
 	}
 
 	public function afterScenario(ScenarioInterface $scenarioNode)
@@ -159,7 +162,7 @@ class JsonOutputPrinter extends StreamOutputPrinter
 		if ($result instanceof ExceptionResult) {
 			$ex = $result->getException();
 			if ($ex !== null) {
-				$featureLine = ' in ' . $this->featureUri . ':' . $stepNode->getLine();
+				$featureLine = ' in ' . $this->featureUri . ':' . ($this->scenarioLine ?? $stepNode->getLine());
 
 				$exceptionTrace = $ex->getTrace();
 

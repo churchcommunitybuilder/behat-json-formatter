@@ -1,0 +1,10 @@
+{
+  "phpcs.standard": "phpcs_ruleset.xml",
+  "phpcs.composerJsonPath": "composer.json",
+  "phpcs.showWarnings": true,
+  "[php]": {
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4,
+    "editor.rulers": [120]
+  }
+}
