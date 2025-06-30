@@ -98,7 +98,6 @@ class JsonOutputPrinter extends StreamOutputPrinter
 
 	public function endFeature(AfterFeatureTested $afterFeature)
 	{
-		error_log('Passed: ' . ($afterFeature->getTestResult()->isPassed() ? 'true' : 'false'));
 		$this->write(']}');
 	}
 
