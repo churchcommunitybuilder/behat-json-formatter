@@ -10,6 +10,8 @@ use Behat\Gherkin\Node\ScenarioInterface;
 use Behat\Gherkin\Node\StepNode;
 use Behat\Gherkin\Node\TaggedNodeInterface;
 use Behat\Testwork\Call\CallResult;
+use Behat\Testwork\EventDispatcher\Event\AfterSetup;
+use Behat\Testwork\Hook\Tester\Setup\HookedSetup;
 use Behat\Testwork\Hook\Tester\Setup\HookedTeardown;
 use Behat\Testwork\Output\Printer\Factory\OutputFactory;
 use Behat\Testwork\Output\Printer\StreamOutputPrinter;
@@ -33,6 +35,8 @@ class JsonOutputPrinter extends StreamOutputPrinter
 	protected $before;
 	protected $steps;
 	protected $after;
+
+	protected $setup;
 
 	public function __construct(
 		OutputFactory $outputFactory,
@@ -106,6 +110,7 @@ class JsonOutputPrinter extends StreamOutputPrinter
 		$this->before = [];
 		$this->steps = [];
 		$this->after = [];
+		$this->setup = [];
 
 		$this->scenarioLine = $scenarioNode->getLine();
 	}
@@ -234,9 +239,57 @@ class JsonOutputPrinter extends StreamOutputPrinter
 					$stepData['result']['error_message'] .= $errorMessage;
 				}
 			}
+		} elseif (!empty($this->after)) {
+			foreach ($this->after as $after) {
+				/** @var AfterSetup $after */
+				$setup = $after->getSetup();
+				if ($setup instanceof HookedSetup) {
+					foreach ($setup->getHookCallResults() as $callResult) {
+						/** @var CallResult $callResult */
+						if ($callResult->hasException()) {
+							$ex = $callResult->getException();
+
+							$featureLine = ' in ' . $this->featureUri . ':' . ($this->scenarioLine ?? $stepNode->getLine());
+
+							$exceptionTrace = $ex->getTrace();
+
+							$trace = array_map(function ($trace) {
+								$file = $trace['file'] ?? '';
+								$line = $trace['line'] ?? '';
+
+								if ($file === '' && $line === '') {
+									return null;
+								}
+
+								if (str_contains($file, '/vendor/')) {
+									return null;
+								}
+
+								return "{$file}:{$line}";
+							}, $exceptionTrace);
+
+							$errorMessage = get_class($ex) . ': ' . $ex->getMessage() . ' in ' . PHP_EOL;
+
+							$errorMessage .= implode(PHP_EOL, array_filter($trace));
+
+							$errorMessage .= PHP_EOL . $featureLine;
+
+							if (is_string($stepData['result']['error_message'])) {
+								$stepData['result']['error_message'] .= PHP_EOL;
+							}
+							$stepData['result']['error_message'] .= $errorMessage;
+						}
+					}
+				}
+			}
 		}
 
 		$this->steps[] = $stepData;
+	}
+
+	public function afterSetup(AfterSetup $afterSetup)
+	{
+		$this->after[] = $afterSetup;
 	}
 
 	protected function getId($str)
