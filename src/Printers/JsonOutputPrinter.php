@@ -172,8 +172,7 @@ class JsonOutputPrinter extends StreamOutputPrinter
 			],
 		];
 
-		if ($result instanceof ExceptionResult && $result->hasException()) {
-			$ex = $result->getException();
+		$appendException = function (\Throwable $ex) use ($stepNode, &$stepData) {
 			$featureLine = ' in ' . $this->featureUri . ':' . ($this->scenarioLine ?? $stepNode->getLine());
 
 			$exceptionTrace = $ex->getTrace();
@@ -200,43 +199,18 @@ class JsonOutputPrinter extends StreamOutputPrinter
 			$errorMessage .= PHP_EOL . $featureLine;
 
 			$stepData['result']['error_message'] = $errorMessage;
+		};
+
+		if ($result instanceof ExceptionResult && $result->hasException()) {
+			$appendException($result->getException());
+
 		} elseif ($teardown instanceof HookedTeardown && !$teardown->isSuccessful()) {
 			$stepData['result']['status'] = 'failed';
 
 			foreach ($teardown->getHookCallResults() as $callResult) {
 				/** @var CallResult $callResult */
 				if ($callResult->hasException()) {
-					$ex = $callResult->getException();
-
-					$featureLine = ' in ' . $this->featureUri . ':' . ($this->scenarioLine ?? $stepNode->getLine());
-
-					$exceptionTrace = $ex->getTrace();
-
-					$trace = array_map(function ($trace) {
-						$file = $trace['file'] ?? '';
-						$line = $trace['line'] ?? '';
-
-						if ($file === '' && $line === '') {
-							return null;
-						}
-
-						if (str_contains($file, '/vendor/')) {
-							return null;
-						}
-
-						return "{$file}:{$line}";
-					}, $exceptionTrace);
-
-					$errorMessage = get_class($ex) . ': ' . $ex->getMessage() . ' in ' . PHP_EOL;
-
-					$errorMessage .= implode(PHP_EOL, array_filter($trace));
-
-					$errorMessage .= PHP_EOL . $featureLine;
-
-					if (is_string($stepData['result']['error_message'])) {
-						$stepData['result']['error_message'] .= PHP_EOL;
-					}
-					$stepData['result']['error_message'] .= $errorMessage;
+					$appendException($callResult->getException());
 				}
 			}
 		} elseif (!empty($this->after)) {
@@ -247,37 +221,7 @@ class JsonOutputPrinter extends StreamOutputPrinter
 					foreach ($setup->getHookCallResults() as $callResult) {
 						/** @var CallResult $callResult */
 						if ($callResult->hasException()) {
-							$ex = $callResult->getException();
-
-							$featureLine = ' in ' . $this->featureUri . ':' . ($this->scenarioLine ?? $stepNode->getLine());
-
-							$exceptionTrace = $ex->getTrace();
-
-							$trace = array_map(function ($trace) {
-								$file = $trace['file'] ?? '';
-								$line = $trace['line'] ?? '';
-
-								if ($file === '' && $line === '') {
-									return null;
-								}
-
-								if (str_contains($file, '/vendor/')) {
-									return null;
-								}
-
-								return "{$file}:{$line}";
-							}, $exceptionTrace);
-
-							$errorMessage = get_class($ex) . ': ' . $ex->getMessage() . ' in ' . PHP_EOL;
-
-							$errorMessage .= implode(PHP_EOL, array_filter($trace));
-
-							$errorMessage .= PHP_EOL . $featureLine;
-
-							if (is_string($stepData['result']['error_message'])) {
-								$stepData['result']['error_message'] .= PHP_EOL;
-							}
-							$stepData['result']['error_message'] .= $errorMessage;
+							$appendException($callResult->getException());
 						}
 					}
 				}
