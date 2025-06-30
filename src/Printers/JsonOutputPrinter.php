@@ -197,15 +197,13 @@ class JsonOutputPrinter extends StreamOutputPrinter
 
 			$errorMessage .= PHP_EOL . $featureLine;
 
+			$stepData['result']['status'] = 'failed';
 			$stepData['result']['error_message'] = $errorMessage;
 		};
 
 		if ($result instanceof ExceptionResult && $result->hasException()) {
 			$appendException($result->getException());
-
 		} elseif ($teardown instanceof HookedTeardown && !$teardown->isSuccessful()) {
-			$stepData['result']['status'] = 'failed';
-
 			foreach ($teardown->getHookCallResults() as $callResult) {
 				/** @var CallResult $callResult */
 				if ($callResult->hasException()) {
