@@ -62,7 +62,7 @@ class JsonListener implements EventListener
 			return;
 		}
 
-		$this->getOutputPrinter($formatter)->endFeature();
+		$this->getOutputPrinter($formatter)->endFeature($event);
 	}
 
 	protected function beforeScenarioTested(Formatter $formatter, Event $event)
@@ -98,7 +98,11 @@ class JsonListener implements EventListener
 			return;
 		}
 
-		$this->getOutputPrinter($formatter)->afterStep($event->getStep(), $event->getTestResult());
+		$this->getOutputPrinter($formatter)->afterStep(
+			$event->getStep(),
+			$event->getTestResult(),
+			$event->getTeardown()
+		);
 	}
 
 	/**

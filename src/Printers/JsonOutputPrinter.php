@@ -2,16 +2,20 @@
 
 namespace CCB\JsonFormatter\Behat\Printers;
 
+use Behat\Behat\EventDispatcher\Event\AfterFeatureTested;
 use Behat\Behat\Output\Node\Printer\Helper\ResultToStringConverter;
 use Behat\Behat\Output\Statistics\PhaseStatistics;
 use Behat\Gherkin\Node\FeatureNode;
 use Behat\Gherkin\Node\ScenarioInterface;
 use Behat\Gherkin\Node\StepNode;
 use Behat\Gherkin\Node\TaggedNodeInterface;
+use Behat\Testwork\Call\CallResult;
+use Behat\Testwork\Hook\Tester\Setup\HookedTeardown;
 use Behat\Testwork\Output\Printer\Factory\OutputFactory;
 use Behat\Testwork\Output\Printer\StreamOutputPrinter;
 use Behat\Testwork\Tester\Result\ExceptionResult;
 use Behat\Testwork\Tester\Result\TestResult;
+use Behat\Testwork\Tester\Setup\Teardown;
 
 class JsonOutputPrinter extends StreamOutputPrinter
 {
@@ -88,8 +92,9 @@ class JsonOutputPrinter extends StreamOutputPrinter
 		self::$hasPrintedScenario = false;
 	}
 
-	public function endFeature()
+	public function endFeature(AfterFeatureTested $afterFeature)
 	{
+		error_log('Passed: ' . ($afterFeature->getTestResult()->isPassed() ? 'true' : 'false'));
 		$this->write(']}');
 	}
 
@@ -147,8 +152,11 @@ class JsonOutputPrinter extends StreamOutputPrinter
 		$this->statistics->startTimer();
 	}
 
-	public function afterStep(StepNode $stepNode, TestResult $result)
-	{
+	public function afterStep(
+		StepNode $stepNode,
+		TestResult $result,
+		Teardown $teardown
+	) {
 		$stepData = [
 			'keyword' => $stepNode->getKeyword(),
 			'name' => $stepNode->getText(),
@@ -159,35 +167,72 @@ class JsonOutputPrinter extends StreamOutputPrinter
 			],
 		];
 
-		if ($result instanceof ExceptionResult) {
+		if ($result instanceof ExceptionResult && $result->hasException()) {
 			$ex = $result->getException();
-			if ($ex !== null) {
-				$featureLine = ' in ' . $this->featureUri . ':' . ($this->scenarioLine ?? $stepNode->getLine());
+			$featureLine = ' in ' . $this->featureUri . ':' . ($this->scenarioLine ?? $stepNode->getLine());
 
-				$exceptionTrace = $ex->getTrace();
+			$exceptionTrace = $ex->getTrace();
 
-				$trace = array_map(function ($trace) {
-					$file = $trace['file'] ?? '';
-					$line = $trace['line'] ?? '';
+			$trace = array_map(function ($trace) {
+				$file = $trace['file'] ?? '';
+				$line = $trace['line'] ?? '';
 
-					if ($file === '' && $line === '') {
-						return null;
+				if ($file === '' && $line === '') {
+					return null;
+				}
+
+				if (str_contains($file, '/vendor/')) {
+					return null;
+				}
+
+				return "{$file}:{$line}";
+			}, $exceptionTrace);
+
+			$errorMessage = get_class($ex) . ': ' . $ex->getMessage() . ' in ' . PHP_EOL;
+
+			$errorMessage .= implode(PHP_EOL, array_filter($trace));
+
+			$errorMessage .= PHP_EOL . $featureLine;
+
+			$stepData['result']['error_message'] = $errorMessage;
+		} elseif ($teardown instanceof HookedTeardown && !$teardown->isSuccessful()) {
+			$stepData['result']['status'] = 'failed';
+
+			foreach ($teardown->getHookCallResults() as $callResult) {
+				/** @var CallResult $callResult */
+				if ($callResult->hasException()) {
+					$ex = $callResult->getException();
+
+					$featureLine = ' in ' . $this->featureUri . ':' . ($this->scenarioLine ?? $stepNode->getLine());
+
+					$exceptionTrace = $ex->getTrace();
+
+					$trace = array_map(function ($trace) {
+						$file = $trace['file'] ?? '';
+						$line = $trace['line'] ?? '';
+
+						if ($file === '' && $line === '') {
+							return null;
+						}
+
+						if (str_contains($file, '/vendor/')) {
+							return null;
+						}
+
+						return "{$file}:{$line}";
+					}, $exceptionTrace);
+
+					$errorMessage = get_class($ex) . ': ' . $ex->getMessage() . ' in ' . PHP_EOL;
+
+					$errorMessage .= implode(PHP_EOL, array_filter($trace));
+
+					$errorMessage .= PHP_EOL . $featureLine;
+
+					if (is_string($stepData['result']['error_message'])) {
+						$stepData['result']['error_message'] .= PHP_EOL;
 					}
-
-					if (str_contains($file, '/vendor/')) {
-						return null;
-					}
-
-					return "{$file}:{$line}";
-				}, $exceptionTrace);
-
-				$errorMessage = get_class($ex) . ': ' . $ex->getMessage() . ' in ' . PHP_EOL;
-
-				$errorMessage .= implode(PHP_EOL, array_filter($trace));
-
-				$errorMessage .= PHP_EOL . $featureLine;
-
-				$stepData['result']['error_message'] = $errorMessage;
+					$stepData['result']['error_message'] .= $errorMessage;
+				}
 			}
 		}
 
