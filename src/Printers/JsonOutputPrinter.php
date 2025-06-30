@@ -5,6 +5,7 @@ namespace CCB\JsonFormatter\Behat\Printers;
 use Behat\Behat\EventDispatcher\Event\AfterFeatureTested;
 use Behat\Behat\Output\Node\Printer\Helper\ResultToStringConverter;
 use Behat\Behat\Output\Statistics\PhaseStatistics;
+use Behat\Behat\Tester\Result\UndefinedStepResult;
 use Behat\Gherkin\Node\FeatureNode;
 use Behat\Gherkin\Node\ScenarioInterface;
 use Behat\Gherkin\Node\StepNode;
@@ -200,6 +201,12 @@ class JsonOutputPrinter extends StreamOutputPrinter
 			$stepData['result']['status'] = 'failed';
 			$stepData['result']['error_message'] = $errorMessage;
 		};
+
+		if ($result instanceof UndefinedStepResult) {
+			$stepData['result']['status'] = 'failed';
+			$stepData['result']['error_message'] = 'Undefined step in ' .
+				$this->featureUri . ':' . ($this->scenarioLine ?? $stepNode->getLine());
+		}
 
 		if ($result instanceof ExceptionResult && $result->hasException()) {
 			$appendException($result->getException());
