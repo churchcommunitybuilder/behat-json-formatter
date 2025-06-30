@@ -212,8 +212,8 @@ class JsonOutputPrinter extends StreamOutputPrinter
 					$appendException($callResult->getException());
 				}
 			}
-		} elseif (!empty($this->after)) {
-			foreach ($this->after as $after) {
+		} elseif (!empty($this->setup)) {
+			foreach ($this->setup as $after) {
 				/** @var AfterSetup $after */
 				$setup = $after->getSetup();
 				if ($setup instanceof HookedSetup) {
@@ -232,7 +232,7 @@ class JsonOutputPrinter extends StreamOutputPrinter
 
 	public function afterSetup(AfterSetup $afterSetup)
 	{
-		$this->after[] = $afterSetup;
+		$this->setup[] = $afterSetup;
 	}
 
 	protected function getId($str)
