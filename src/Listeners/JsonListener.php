@@ -13,6 +13,7 @@ use Behat\Testwork\EventDispatcher\Event\BeforeExerciseCompleted;
 use Behat\Testwork\Output\Formatter;
 use Behat\Testwork\Output\Node\EventListener\EventListener;
 use Behat\Testwork\Event\Event;
+use Behat\Testwork\EventDispatcher\Event\AfterSetup;
 use CCB\JsonFormatter\Behat\Printers\JsonOutputPrinter;
 
 class JsonListener implements EventListener
@@ -27,6 +28,7 @@ class JsonListener implements EventListener
 		$this->afterScenarioTested($formatter, $event);
 		$this->beforeStepTested($formatter, $event);
 		$this->afterStepTested($formatter, $event);
+		$this->afterSetup($formatter, $event);
 	}
 
 	protected function beforeExerciseCompleted(Formatter $formatter, Event $event)
@@ -56,13 +58,22 @@ class JsonListener implements EventListener
 		$this->getOutputPrinter($formatter)->addFeature($event->getFeature());
 	}
 
+	protected function afterSetup(Formatter $formatter, Event $event)
+	{
+		if (!$event instanceof AfterSetup) {
+			return;
+		}
+
+		$this->getOutputPrinter($formatter)->afterSetup($event);
+	}
+
 	protected function afterFeatureTested(Formatter $formatter, Event $event)
 	{
 		if (!$event instanceof AfterFeatureTested) {
 			return;
 		}
 
-		$this->getOutputPrinter($formatter)->endFeature();
+		$this->getOutputPrinter($formatter)->endFeature($event);
 	}
 
 	protected function beforeScenarioTested(Formatter $formatter, Event $event)
@@ -89,7 +100,7 @@ class JsonListener implements EventListener
 			return;
 		}
 
-		$this->getOutputPrinter($formatter)->beforeStep();
+		$this->getOutputPrinter($formatter)->beforeStep($event);
 	}
 
 	protected function afterStepTested(Formatter $formatter, Event $event)
@@ -98,7 +109,11 @@ class JsonListener implements EventListener
 			return;
 		}
 
-		$this->getOutputPrinter($formatter)->afterStep($event->getStep(), $event->getTestResult());
+		$this->getOutputPrinter($formatter)->afterStep(
+			$event->getStep(),
+			$event->getTestResult(),
+			$event->getTeardown()
+		);
 	}
 
 	/**

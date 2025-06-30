@@ -2,16 +2,22 @@
 
 namespace CCB\JsonFormatter\Behat\Printers;
 
+use Behat\Behat\EventDispatcher\Event\AfterFeatureTested;
 use Behat\Behat\Output\Node\Printer\Helper\ResultToStringConverter;
 use Behat\Behat\Output\Statistics\PhaseStatistics;
 use Behat\Gherkin\Node\FeatureNode;
 use Behat\Gherkin\Node\ScenarioInterface;
 use Behat\Gherkin\Node\StepNode;
 use Behat\Gherkin\Node\TaggedNodeInterface;
+use Behat\Testwork\Call\CallResult;
+use Behat\Testwork\EventDispatcher\Event\AfterSetup;
+use Behat\Testwork\Hook\Tester\Setup\HookedSetup;
+use Behat\Testwork\Hook\Tester\Setup\HookedTeardown;
 use Behat\Testwork\Output\Printer\Factory\OutputFactory;
 use Behat\Testwork\Output\Printer\StreamOutputPrinter;
 use Behat\Testwork\Tester\Result\ExceptionResult;
 use Behat\Testwork\Tester\Result\TestResult;
+use Behat\Testwork\Tester\Setup\Teardown;
 
 class JsonOutputPrinter extends StreamOutputPrinter
 {
@@ -29,6 +35,8 @@ class JsonOutputPrinter extends StreamOutputPrinter
 	protected $before;
 	protected $steps;
 	protected $after;
+
+	protected $setup;
 
 	public function __construct(
 		OutputFactory $outputFactory,
@@ -88,8 +96,9 @@ class JsonOutputPrinter extends StreamOutputPrinter
 		self::$hasPrintedScenario = false;
 	}
 
-	public function endFeature()
+	public function endFeature(AfterFeatureTested $afterFeature)
 	{
+		error_log('Passed: ' . ($afterFeature->getTestResult()->isPassed() ? 'true' : 'false'));
 		$this->write(']}');
 	}
 
@@ -101,6 +110,7 @@ class JsonOutputPrinter extends StreamOutputPrinter
 		$this->before = [];
 		$this->steps = [];
 		$this->after = [];
+		$this->setup = [];
 
 		$this->scenarioLine = $scenarioNode->getLine();
 	}
@@ -147,8 +157,11 @@ class JsonOutputPrinter extends StreamOutputPrinter
 		$this->statistics->startTimer();
 	}
 
-	public function afterStep(StepNode $stepNode, TestResult $result)
-	{
+	public function afterStep(
+		StepNode $stepNode,
+		TestResult $result,
+		Teardown $teardown
+	) {
 		$stepData = [
 			'keyword' => $stepNode->getKeyword(),
 			'name' => $stepNode->getText(),
@@ -159,39 +172,68 @@ class JsonOutputPrinter extends StreamOutputPrinter
 			],
 		];
 
-		if ($result instanceof ExceptionResult) {
-			$ex = $result->getException();
-			if ($ex !== null) {
-				$featureLine = ' in ' . $this->featureUri . ':' . ($this->scenarioLine ?? $stepNode->getLine());
+		$appendException = function (\Throwable $ex) use ($stepNode, &$stepData) {
+			$featureLine = ' in ' . $this->featureUri . ':' . ($this->scenarioLine ?? $stepNode->getLine());
 
-				$exceptionTrace = $ex->getTrace();
+			$exceptionTrace = $ex->getTrace();
 
-				$trace = array_map(function ($trace) {
-					$file = $trace['file'] ?? '';
-					$line = $trace['line'] ?? '';
+			$trace = array_map(function ($trace) {
+				$file = $trace['file'] ?? '';
+				$line = $trace['line'] ?? '';
 
-					if ($file === '' && $line === '') {
-						return null;
+				if ($file === '' && $line === '') {
+					return null;
+				}
+
+				if (str_contains($file, '/vendor/')) {
+					return null;
+				}
+
+				return "{$file}:{$line}";
+			}, $exceptionTrace);
+
+			$errorMessage = get_class($ex) . ': ' . $ex->getMessage() . ' in ' . PHP_EOL;
+
+			$errorMessage .= implode(PHP_EOL, array_filter($trace));
+
+			$errorMessage .= PHP_EOL . $featureLine;
+
+			$stepData['result']['error_message'] = $errorMessage;
+		};
+
+		if ($result instanceof ExceptionResult && $result->hasException()) {
+			$appendException($result->getException());
+
+		} elseif ($teardown instanceof HookedTeardown && !$teardown->isSuccessful()) {
+			$stepData['result']['status'] = 'failed';
+
+			foreach ($teardown->getHookCallResults() as $callResult) {
+				/** @var CallResult $callResult */
+				if ($callResult->hasException()) {
+					$appendException($callResult->getException());
+				}
+			}
+		} elseif (!empty($this->after)) {
+			foreach ($this->after as $after) {
+				/** @var AfterSetup $after */
+				$setup = $after->getSetup();
+				if ($setup instanceof HookedSetup) {
+					foreach ($setup->getHookCallResults() as $callResult) {
+						/** @var CallResult $callResult */
+						if ($callResult->hasException()) {
+							$appendException($callResult->getException());
+						}
 					}
-
-					if (str_contains($file, '/vendor/')) {
-						return null;
-					}
-
-					return "{$file}:{$line}";
-				}, $exceptionTrace);
-
-				$errorMessage = get_class($ex) . ': ' . $ex->getMessage() . ' in ' . PHP_EOL;
-
-				$errorMessage .= implode(PHP_EOL, array_filter($trace));
-
-				$errorMessage .= PHP_EOL . $featureLine;
-
-				$stepData['result']['error_message'] = $errorMessage;
+				}
 			}
 		}
 
 		$this->steps[] = $stepData;
+	}
+
+	public function afterSetup(AfterSetup $afterSetup)
+	{
+		$this->after[] = $afterSetup;
 	}
 
 	protected function getId($str)
