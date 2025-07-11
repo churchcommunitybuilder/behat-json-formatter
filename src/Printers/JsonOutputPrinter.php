@@ -33,11 +33,11 @@ class JsonOutputPrinter extends StreamOutputPrinter
 	protected $featureUri = null;
 	protected $scenarioLine = null;
 	protected $featureTags;
-	protected $before;
-	protected $steps;
-	protected $after;
+	protected $before = [];
+	protected $steps = [];
+	protected $after = [];
 
-	protected $setup;
+	protected $setup = [];
 
 	public function __construct(
 		OutputFactory $outputFactory,
@@ -107,10 +107,6 @@ class JsonOutputPrinter extends StreamOutputPrinter
 		if (self::$hasPrintedScenario) {
 			$this->write(',');
 		}
-		$this->before = [];
-		$this->steps = [];
-		$this->after = [];
-		$this->setup = [];
 
 		$this->scenarioLine = $scenarioNode->getLine();
 	}
@@ -137,6 +133,11 @@ class JsonOutputPrinter extends StreamOutputPrinter
 		$this->write(json_encode($scenarioData, JSON_PRETTY_PRINT));
 
 		self::$hasPrintedScenario = true;
+
+		$this->before = [];
+		$this->steps = [];
+		$this->after = [];
+		$this->setup = [];
 	}
 
 	protected function getTags(TaggedNodeInterface $node)
