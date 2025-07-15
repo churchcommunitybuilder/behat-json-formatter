@@ -199,7 +199,7 @@ class JsonOutputPrinter extends StreamOutputPrinter
 
 			$errorMessage .= PHP_EOL . $featureLine;
 
-			$stepData['result']['status'] = 'failed';
+			$stepData['result']['status'] = str_contains($ex->getMessage(), 'SKIPPING FEATURE') ? 'skipped' : 'failed';
 			$stepData['result']['error_message'] = $errorMessage;
 		};
 
